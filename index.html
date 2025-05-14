@@ -13,6 +13,21 @@
 </head>
 
 <body style='margin: 0; overflow: hidden;'>
+    <div id="info-text" style="
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.7);
+        color: #fff;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-family: Arial, sans-serif;
+        z-index: 10;
+        pointer-events: none;
+    ">
+        Welcome to GeoAR! Your model will appear at your location.
+    </div>
     <a-scene
         vr-mode-ui="enabled: false"
         embedded
@@ -34,6 +49,8 @@
                     const longitude = position.coords.longitude;
                     const model = document.getElementById('model');
                     model.setAttribute('gps-entity-place', `longitude: ${longitude}; latitude: ${latitude};`);
+                    const info = document.getElementById('info-text');
+                    info.innerHTML += `Model placed at your location!<br>Latitude: ${latitude}<br>Longitude: ${longitude}`;
                 }, function(error) {
                     console.error('Error getting location', error);
                 });
