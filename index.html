@@ -12,6 +12,7 @@
         THREEx.ArToolkitContext.baseURL = 'https://raw.githack.com/jeromeetienne/ar.js/master/three.js/'
     </script>
     <script src="./script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link rel="stylesheet" type="text/css" href="./style.css"/>
 </head>
 
@@ -22,8 +23,15 @@
         embedded
         arjs='sourceType: webcam; sourceWidth:1280; sourceHeight:960; displayWidth: 1280; displayHeight: 960; debugUIEnabled: false;'>
     <a-camera gps-camera rotation-reader></a-camera>
+    <a-entity id="video-plane" visible="false"
+          geometry="primitive: plane; height: 1; width: 1"
+          material="shader: flat; src: #overlay-video">
+</a-entity>
 </a-scene>
 <div class="centered">
     <button data-action="change"></button>
 </div>
+<video id="camera-feed" autoplay playsinline style="display:none;"></video>
+<video id="overlay-video" src="https://youtu.be/dQw4w9WgXcQ" loop crossorigin="anonymous" style="display:none;"></video>
 </body>
+</html>

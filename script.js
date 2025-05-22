@@ -4,6 +4,30 @@ window.onload = () => {
 
     let places = staticLoadPlaces();
     renderPlaces(places);
+
+    // Start camera feed for OCR
+    const video = document.getElementById('camera-feed');
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+        video.srcObject = stream;
+    });
+
+    // Run OCR every 2 seconds
+    setInterval(async () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
+        if (text.includes('TEXT')) {
+            // Show video overlay
+            const videoPlane = document.getElementById('video-plane');
+            videoPlane.setAttribute('visible', 'true');
+            document.getElementById('overlay-video').play();
+            // Optionally, position the plane based on detection
+        }
+    }, 2000);
 };
 
 function staticLoadPlaces() {
