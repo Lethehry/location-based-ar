@@ -11,16 +11,38 @@ window.onload = () => {
         video.srcObject = stream;
     });
 
+    // UI element to show recognized text
+    let recognizedTextDiv = document.createElement('div');
+    recognizedTextDiv.id = 'recognized-text-ui';
+    recognizedTextDiv.style.position = 'fixed';
+    recognizedTextDiv.style.top = '10%';
+    recognizedTextDiv.style.left = '50%';
+    recognizedTextDiv.style.transform = 'translateX(-50%)';
+    recognizedTextDiv.style.background = 'rgba(0,0,0,0.7)';
+    recognizedTextDiv.style.color = '#fff';
+    recognizedTextDiv.style.padding = '8px 16px';
+    recognizedTextDiv.style.borderRadius = '8px';
+    recognizedTextDiv.style.fontSize = '1.1em';
+    recognizedTextDiv.style.zIndex = '10000';
+    recognizedTextDiv.style.pointerEvents = 'none';
+    recognizedTextDiv.innerText = '识别文字将在这里显示...';
+    document.body.appendChild(recognizedTextDiv);
+
     // Run OCR every 2 seconds
     setInterval(async () => {
+        if (video.readyState !== 4) return; // Wait until video is ready
+
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
-        if (text.includes('TEXT')) {
+        // Use 'chi_sim' for Simplified Chinese, or 'eng' for English
+        const { data: { text } } = await Tesseract.recognize(canvas, 'chi_sim');
+        recognizedTextDiv.innerText = text.trim() ? text : '未检测到文字';
+
+        if (text.includes('你的目标文本')) {
             // Show video overlay
             const videoPlane = document.getElementById('video-plane');
             videoPlane.setAttribute('visible', 'true');
@@ -31,12 +53,25 @@ window.onload = () => {
 };
 
 function staticLoadPlaces() {
+    let latitude = 22.3755709;
+    let longitude = 114.1253388;
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+            latitude = position.coords.latitude;
+            longitude = position.coords.longitude;
+        }, function(error) {
+            console.error('Error getting location', error);
+        });
+    } else {
+        alert("Geolocation is not supported by your browser.");
+    }
+
     return [
         {
             name: 'Pokèmon',
             location: {
-                lat: 22.3755709,
-                lng: 114.1253388,
+                lat: latitude,
+                lng: longitude,
             },
         },
     ];
