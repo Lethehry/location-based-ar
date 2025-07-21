@@ -11,23 +11,9 @@
 </head>
 
 <body style='margin: 0; overflow: hidden;'>
-    <div class="centered instructions"></div>
-    <a-scene 
-        vr-mode-ui='enabled: false' 
-        embedded
-        arjs='sourceType: webcam; sourceWidth:1280; sourceHeight:960; displayWidth: 1280; displayHeight: 960; debugUIEnabled: false;'>
-    <a-camera gps-camera rotation-reader></a-camera>
-    <a-entity id="video-plane" visible="false"
-          geometry="primitive: plane; height: 1; width: 1"
-          material="shader: flat; src: #overlay-video">
-</a-entity>
-</a-scene>
-<div class="centered">
     <button type="button" onclick="init()">Start</button>
-</div>
-<video id="camera-feed" autoplay playsinline style="display:none;"></video>
-<video id="overlay-video" src="https://www.bilibili.com/video/BV1UT42167xb" loop crossorigin="anonymous" style="display:none;"></video>
-<div id="webcam-container"></div>
-<div id="label-container"></div>
+    <div id="webcam-container"></div>
+    <div id="label-container"></div>
+    <script src="./script.js"></script>
 </body>
 </html>
