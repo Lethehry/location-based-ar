@@ -25,7 +25,7 @@ window.onload = () => {
     recognizedTextDiv.style.fontSize = '1.1em';
     recognizedTextDiv.style.zIndex = '10000';
     recognizedTextDiv.style.pointerEvents = 'none';
-    recognizedTextDiv.innerText = '识别文字将在这里显示...';
+    recognizedTextDiv.innerText = 'DEBUGTEXT: Waiting for OCR...';
     document.body.appendChild(recognizedTextDiv);
 
     // Load the model
@@ -67,6 +67,9 @@ window.onload = () => {
             videoPlane.setAttribute('visible', 'false');
             overlayVideo.pause();
         }
+
+        // Show debug info in UI
+        recognizedTextDiv.innerText = `ClassId: ${classId}\nVideo: ${videoURLs[classId] || 'None'}`;
     }, 2000);
 };
 
