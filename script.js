@@ -24,8 +24,10 @@ async function init() {
     maxPredictions = model.getTotalClasses();
 
     // Convenience function to setup a webcam
-    const flip = true; // whether to flip the webcam
-    webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
+    const flip = false; // whether to flip the webcam
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    webcam = new tmImage.Webcam(width, height, flip); // width, height, flip
     await webcam.setup(); // request access to the webcam
     await webcam.play();
     window.requestAnimationFrame(loop);
@@ -52,6 +54,18 @@ async function predict() {
         const classPrediction =
             prediction[i].className + ": " + prediction[i].probability.toFixed(2);
         labelContainer.childNodes[i].innerHTML = classPrediction;
+    }
+}
+
+window.onload = async () => {
+    const debugDiv = document.getElementById('info-container');
+    debugDiv.innerText += 'Loading model...\n';
+
+    try {
+        await init();
+        debugDiv.innerText += 'Model loaded successfully.\n';
+    } catch (error) {
+        debugDiv.innerText += 'Error loading model: ' + error.message + '\n';
     }
 }
 ;
