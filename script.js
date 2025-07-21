@@ -1,17 +1,5 @@
 window.onload = () => {
-    const button = document.querySelector('button[data-action="change"]');
-    button.innerText = '﹖';
-
-    let places = staticLoadPlaces();
-    renderPlaces(places);
-
-    // Start camera feed for OCR
-    const video = document.getElementById('camera-feed');
-    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-        video.srcObject = stream;
-    });
-
-    // UI element to show recognized text
+    // UI debug block
     let recognizedTextDiv = document.createElement('div');
     recognizedTextDiv.id = 'recognized-text-ui';
     recognizedTextDiv.style.position = 'fixed';
@@ -25,39 +13,44 @@ window.onload = () => {
     recognizedTextDiv.style.fontSize = '1.1em';
     recognizedTextDiv.style.zIndex = '10000';
     recognizedTextDiv.style.pointerEvents = 'none';
-    recognizedTextDiv.innerText = 'DEBUGTEXT: Waiting...';
+    recognizedTextDiv.innerText = 'Waiting for model and camera...';
     document.body.appendChild(recognizedTextDiv);
 
-    // Load the model
+    // Start camera feed
+    const video = document.getElementById('camera-feed');
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+        video.srcObject = stream;
+    });
+
+    // Load Teachable Machine model
     const modelURL = "model.json";
     let model;
     tf.loadGraphModel(modelURL).then(m => { model = m; });
 
-    // Array of video URLs, order matches your Teachable Machine class order
+    // Video URLs for each class
     const videoURLs = [
         "https://www.bilibili.com/video/BV1UT42167xb?t=1.0", // classId 0
-        "https://www.bilibili.com/video/BV1Nb4y1Z7tZ?t=0.1" // classId 1
+        "https://www.bilibili.com/video/BV1Nb4y1Z7tZ?t=0.1"  // classId 1
         // Add more as needed
     ];
 
-    // Reference to overlay video element
+    // Overlay video and plane
     const overlayVideo = document.getElementById('overlay-video');
     const videoPlane = document.getElementById('video-plane');
 
-    // Run detection every 2 seconds
+    // Main detection loop
     setInterval(async () => {
-        // Check if model is loaded
+        // Debug: show status
         if (!model) {
             recognizedTextDiv.innerText = 'Model not loaded yet.';
             return;
         }
-
-        // Check if video is ready
         if (video.readyState !== 4) {
             recognizedTextDiv.innerText = 'Camera not ready.';
             return;
         }
 
+        // Get camera frame
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -69,7 +62,6 @@ window.onload = () => {
         let errorMsg = '';
 
         try {
-            // Run image classification
             prediction = await model.predict(tf.browser.fromPixels(canvas));
             classId = prediction.argMax(-1).dataSync()[0];
         } catch (err) {
@@ -93,94 +85,3 @@ window.onload = () => {
                 : `ClassId: ${classId}\nVideo: ${videoURLs[classId] || 'None'}\nModel loaded: ${!!model}\nVideo ready: ${video.readyState === 4}`;
     }, 2000);
 };
-
-function staticLoadPlaces() {
-    let latitude = 22.3755709;
-    let longitude = 114.1253388;
-    if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(function(position) {
-            latitude = position.coords.latitude;
-            longitude = position.coords.longitude;
-        }, function(error) {
-            console.error('Error getting location', error);
-        });
-    } else {
-        alert("Geolocation is not supported by your browser.");
-    }
-
-    return [
-        {
-            name: 'Pokèmon',
-            location: {
-                lat: latitude,
-                lng: longitude,
-            },
-        },
-    ];
-}
-
-var models = [
-    {
-        url: './assets/magnemite/scene.gltf',
-        scale: '0.5 0.5 0.5',
-        info: 'Magnemite, Lv. 5, HP 10/10',
-        rotation: '0 180 0',
-    },
-    {
-        url: './assets/articuno/scene.gltf',
-        scale: '0.2 0.2 0.2',
-        rotation: '0 180 0',
-        info: 'Articuno, Lv. 80, HP 100/100',
-    },
-    {
-        url: './assets/dragonite/scene.gltf',
-        scale: '0.08 0.08 0.08',
-        rotation: '0 180 0',
-        info: 'Dragonite, Lv. 99, HP 150/150',
-    },
-];
-
-var modelIndex = 0;
-var setModel = function (model, entity) {
-    if (model.scale) {
-        entity.setAttribute('scale', model.scale);
-    }
-
-    if (model.rotation) {
-        entity.setAttribute('rotation', model.rotation);
-    }
-
-    if (model.position) {
-        entity.setAttribute('position', model.position);
-    }
-
-    entity.setAttribute('gltf-model', model.url);
-
-    const div = document.querySelector('.instructions');
-    div.innerText = model.info;
-};
-
-function renderPlaces(places) {
-    let scene = document.querySelector('a-scene');
-
-    places.forEach((place) => {
-        let latitude = place.location.lat;
-        let longitude = place.location.lng;
-
-        let model = document.createElement('a-entity');
-        model.setAttribute('gps-entity-place', `latitude: ${latitude}; longitude: ${longitude};`);
-
-        setModel(models[modelIndex], model);
-
-        model.setAttribute('animation-mixer', '');
-
-        document.querySelector('button[data-action="change"]').addEventListener('click', function () {
-            var entity = document.querySelector('[gps-entity-place]');
-            modelIndex++;
-            var newIndex = modelIndex % models.length;
-            setModel(models[newIndex], entity);
-        });
-
-        scene.appendChild(model);
-    });
-}
