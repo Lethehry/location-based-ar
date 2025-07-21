@@ -25,7 +25,7 @@ window.onload = () => {
     recognizedTextDiv.style.fontSize = '1.1em';
     recognizedTextDiv.style.zIndex = '10000';
     recognizedTextDiv.style.pointerEvents = 'none';
-    recognizedTextDiv.innerText = 'DEBUGTEXT: Waiting for OCR...';
+    recognizedTextDiv.innerText = 'DEBUGTEXT: Waiting...';
     document.body.appendChild(recognizedTextDiv);
 
     // Load the model
@@ -46,7 +46,17 @@ window.onload = () => {
 
     // Run detection every 2 seconds
     setInterval(async () => {
-        if (video.readyState !== 4) return;
+        // Check if model is loaded
+        if (!model) {
+            recognizedTextDiv.innerText = 'Model not loaded yet.';
+            return;
+        }
+
+        // Check if video is ready
+        if (video.readyState !== 4) {
+            recognizedTextDiv.innerText = 'Camera not ready.';
+            return;
+        }
 
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
@@ -54,12 +64,20 @@ window.onload = () => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // Run image classification
-        const prediction = await model.predict(tf.browser.fromPixels(canvas));
-        const classId = prediction.argMax(-1).dataSync()[0];
+        let classId = null;
+        let prediction = null;
+        let errorMsg = '';
+
+        try {
+            // Run image classification
+            prediction = await model.predict(tf.browser.fromPixels(canvas));
+            classId = prediction.argMax(-1).dataSync()[0];
+        } catch (err) {
+            errorMsg = 'Prediction error: ' + err.message;
+        }
 
         // Show corresponding video
-        if (videoURLs[classId]) {
+        if (classId !== null && videoURLs[classId]) {
             overlayVideo.src = videoURLs[classId];
             videoPlane.setAttribute('visible', 'true');
             overlayVideo.play();
@@ -69,7 +87,10 @@ window.onload = () => {
         }
 
         // Show debug info in UI
-        recognizedTextDiv.innerText = `ClassId: ${classId}\nVideo: ${videoURLs[classId] || 'None'}`;
+        recognizedTextDiv.innerText =
+            errorMsg
+                ? errorMsg
+                : `ClassId: ${classId}\nVideo: ${videoURLs[classId] || 'None'}\nModel loaded: ${!!model}\nVideo ready: ${video.readyState === 4}`;
     }, 2000);
 };
 
