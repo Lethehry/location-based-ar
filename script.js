@@ -28,9 +28,25 @@ window.onload = () => {
     recognizedTextDiv.innerText = '识别文字将在这里显示...';
     document.body.appendChild(recognizedTextDiv);
 
-    // Run OCR every 2 seconds
+    // Load the model
+    const modelURL = "model.json";
+    let model;
+    tf.loadGraphModel(modelURL).then(m => { model = m; });
+
+    // Array of video URLs, order matches your Teachable Machine class order
+    const videoURLs = [
+        "https://www.bilibili.com/video/BV1UT42167xb?t=1.0", // classId 0
+        "https://www.bilibili.com/video/BV1Nb4y1Z7tZ?t=0.1" // classId 1
+        // Add more as needed
+    ];
+
+    // Reference to overlay video element
+    const overlayVideo = document.getElementById('overlay-video');
+    const videoPlane = document.getElementById('video-plane');
+
+    // Run detection every 2 seconds
     setInterval(async () => {
-        if (video.readyState !== 4) return; // Wait until video is ready
+        if (video.readyState !== 4) return;
 
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
@@ -38,16 +54,18 @@ window.onload = () => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // Use 'chi_sim' for Simplified Chinese, or 'eng' for English
-        const { data: { text } } = await Tesseract.recognize(canvas, 'chi_sim');
-        recognizedTextDiv.innerText = text.trim() ? text : '未检测到文字';
+        // Run image classification
+        const prediction = await model.predict(tf.browser.fromPixels(canvas));
+        const classId = prediction.argMax(-1).dataSync()[0];
 
-        if (text.includes('你的目标文本')) {
-            // Show video overlay
-            const videoPlane = document.getElementById('video-plane');
+        // Show corresponding video
+        if (videoURLs[classId]) {
+            overlayVideo.src = videoURLs[classId];
             videoPlane.setAttribute('visible', 'true');
-            document.getElementById('overlay-video').play();
-            // Optionally, position the plane based on detection
+            overlayVideo.play();
+        } else {
+            videoPlane.setAttribute('visible', 'false');
+            overlayVideo.pause();
         }
     }, 2000);
 };
