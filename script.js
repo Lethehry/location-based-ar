@@ -43,7 +43,7 @@ window.onload = () => {
     });
 
     // Load Teachable Machine model
-    const modelURL = "model.json";
+    const modelURL = "./model.json";
     let model;
     tf.loadGraphModel(modelURL)
         .then(m => {
