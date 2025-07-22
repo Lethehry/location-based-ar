@@ -28,7 +28,7 @@ async function init() {
     const width = window.innerWidth;
     const height = window.innerHeight;
     webcam = new tmImage.Webcam(width, height, flip); // width, height, flip
-    await webcam.setup({ facingMode: "environment" }); // request access to the webcam
+    await webcam.setup(); // request access to the webcam
     await webcam.play();
 
     // Make webcam canvas fill parent
