@@ -32,6 +32,11 @@ async function init() {
     await webcam.play();
     window.requestAnimationFrame(loop);
 
+
+    // Set canvas style
+    webcam.canvas.style.width = "100vw";
+    webcam.canvas.style.height = "100vh";
+    webcam.canvas.style.objectFit = "cover";
     // append elements to the DOM
     document.getElementById("webcam-container").appendChild(webcam.canvas);
     labelContainer = document.getElementById("label-container");
