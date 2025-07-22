@@ -30,9 +30,10 @@ async function init() {
     webcam = new tmImage.Webcam(width, height, flip); // width, height, flip
     await webcam.setup(); // request access to the webcam
     await webcam.play();
+    window.requestAnimationFrame(loop);
 
+    // append elements to the DOM
     document.getElementById("webcam-container").appendChild(webcam.canvas);
-
     labelContainer = document.getElementById("label-container");
     for (let i = 0; i < maxPredictions; i++) { // and class labels
         labelContainer.appendChild(document.createElement("div"));
@@ -54,25 +55,17 @@ async function predict() {
             prediction[i].className + ": " + prediction[i].probability.toFixed(2);
         labelContainer.childNodes[i].innerHTML = classPrediction;
     }
-    // Optionally show debug info
-    const infoDiv = document.getElementById('info-container');
-    infoDiv.innerText = 'Recognition done at ' + new Date().toLocaleTimeString();
 }
 
 window.onload = async () => {
-    const infoDiv = document.getElementById('info-container');
-    infoDiv.innerText = 'Loading model...';
+    const debugDiv = document.getElementById('info-container');
+    debugDiv.innerText += 'Loading model...\n';
 
     try {
         await init();
-        infoDiv.innerText = 'Model loaded. Ready!';
+        debugDiv.innerText += 'Model loaded successfully.\n';
     } catch (error) {
-        infoDiv.innerText = 'Error loading model: ' + error.message;
+        debugDiv.innerText += 'Error loading model: ' + error.message + '\n';
     }
-
-    // Button event for recognition
-    document.getElementById('recognize-btn').onclick = async () => {
-        infoDiv.innerText = 'Recognizing...';
-        await predict();
-    };
 }
+;
