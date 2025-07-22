@@ -31,10 +31,6 @@ async function init() {
     await webcam.setup(); // request access to the webcam
     await webcam.play();
 
-    // Make webcam canvas fill parent
-    webcam.canvas.style.width = "100vw";
-    webcam.canvas.style.height = "100vh";
-    webcam.canvas.style.objectFit = "cover";
     document.getElementById("webcam-container").appendChild(webcam.canvas);
 
     labelContainer = document.getElementById("label-container");
@@ -45,6 +41,7 @@ async function init() {
 
 async function loop() {
     webcam.update(); // update the webcam frame
+    await predict();
     window.requestAnimationFrame(loop);
 }
 
