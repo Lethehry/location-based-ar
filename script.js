@@ -63,7 +63,7 @@ async function predict() {
 
     // Show video if prediction is confident enough
     const overlayVideo = document.getElementById('overlay-video');
-    if (maxProb > 0.8 && videoURLs[maxIndex]) { // threshold can be adjusted
+    if (maxProb > 0.5 && videoURLs[maxIndex]) { // threshold can be adjusted
         overlayVideo.src = videoURLs[maxIndex];
         overlayVideo.style.display = "block";
         overlayVideo.play();
