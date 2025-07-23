@@ -32,11 +32,6 @@ async function init() {
     await webcam.play();
     window.requestAnimationFrame(loop);
 
-
-    // Set canvas style
-    webcam.canvas.style.width = "100vw";
-    webcam.canvas.style.height = "100vh";
-    webcam.canvas.style.objectFit = "cover";
     // append elements to the DOM
     document.getElementById("webcam-container").appendChild(webcam.canvas);
     labelContainer = document.getElementById("label-container");
@@ -47,7 +42,6 @@ async function init() {
 
 async function loop() {
     webcam.update(); // update the webcam frame
-    await predict();
     window.requestAnimationFrame(loop);
 }
 
@@ -60,6 +54,13 @@ async function predict() {
             prediction[i].className + ": " + prediction[i].probability.toFixed(2);
         labelContainer.childNodes[i].innerHTML = classPrediction;
     }
+}
+
+async function onRecognizeClick() {
+    const infoDiv = document.getElementById('info-container');
+    infoDiv.innerText = 'Recognizing...';
+    await predict();
+    infoDiv.innerText += '\nRecognition finished at ' + new Date().toLocaleTimeString();
 }
 
 window.onload = async () => {
