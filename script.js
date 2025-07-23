@@ -47,12 +47,29 @@ async function loop() {
 
 // run the webcam image through the image model
 async function predict() {
-    // predict can take in an image, video or canvas html element
     const prediction = await model.predict(webcam.canvas);
+    let maxProb = 0;
+    let maxIndex = 0;
     for (let i = 0; i < maxPredictions; i++) {
+        const prob = prediction[i].probability;
+        if (prob > maxProb) {
+            maxProb = prob;
+            maxIndex = i;
+        }
         const classPrediction =
-            prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+            prediction[i].className + ": " + prob.toFixed(2);
         labelContainer.childNodes[i].innerHTML = classPrediction;
+    }
+
+    // Show video if prediction is confident enough
+    const overlayVideo = document.getElementById('overlay-video');
+    if (maxProb > 0.8 && videoURLs[maxIndex]) { // threshold can be adjusted
+        overlayVideo.src = videoURLs[maxIndex];
+        overlayVideo.style.display = "block";
+        overlayVideo.play();
+    } else {
+        overlayVideo.pause();
+        overlayVideo.style.display = "none";
     }
 }
 
