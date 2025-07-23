@@ -5,8 +5,8 @@
     <meta charset='utf-8'>
     <meta http-equiv='X-UA-Compatible' content='IE=edge'>
     <title>GeoAR.js demo</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
     <link rel="stylesheet" type="text/css" href="./style.css"/>
 </head>
 
@@ -21,6 +21,7 @@
             display:none;
             pointer-events:none;
         " autoplay loop muted></video>
+        <canvas id="overlay-canvas" style="position:absolute;top:0;left:0;width:100vw;height:100vh;z-index:20;pointer-events:none;"></canvas>
     </div>
     <div id="label-container" style="position:absolute; top:60%; left:50%; transform:translateX(-50%); z-index:2;"></div>
     <div id="info-container" style="position:absolute; top:80%; left:50%; transform:translateX(-50%); z-index:2;"></div>

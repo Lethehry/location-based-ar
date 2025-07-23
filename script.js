@@ -10,34 +10,31 @@ const videoURLs = [
 const URL = "./model/";
 
 let model, webcam, labelContainer, maxPredictions;
+let webcamStream, video, overlayCanvas, overlayCtx;
 
-// Load the image model and setup the webcam
 async function init() {
-    const modelURL = URL + "model.json";
-    const metadataURL = URL + "metadata.json";
+    // Setup webcam video
+    video = document.createElement('video');
+    video.setAttribute('autoplay', '');
+    video.setAttribute('playsinline', '');
+    video.style.width = "100vw";
+    video.style.height = "100vh";
+    document.getElementById("webcam-container").appendChild(video);
 
-    // load the model and metadata
-    // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
-    // or files from your local hard drive
-    // Note: the pose library adds "tmImage" object to your window (window.tmImage)
-    model = await tmImage.load(modelURL, metadataURL);
-    maxPredictions = model.getTotalClasses();
+    // Overlay canvas
+    overlayCanvas = document.getElementById('overlay-canvas');
+    overlayCanvas.width = window.innerWidth;
+    overlayCanvas.height = window.innerHeight;
+    overlayCtx = overlayCanvas.getContext('2d');
 
-    // Convenience function to setup a webcam
-    const flip = false; // whether to flip the webcam
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    webcam = new tmImage.Webcam(width, height, flip); // width, height, flip
-    await webcam.setup({facingMode: "environment"}); // request access to the webcam
-    await webcam.play();
-    window.requestAnimationFrame(loop);
+    // Start webcam
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    video.srcObject = stream;
+    webcamStream = stream;
 
-    // append elements to the DOM
-    document.getElementById("webcam-container").appendChild(webcam.canvas);
-    labelContainer = document.getElementById("label-container");
-    for (let i = 0; i < maxPredictions; i++) { // and class labels
-        labelContainer.appendChild(document.createElement("div"));
-    }
+    // Load Coco SSD model
+    model = await cocoSsd.load();
+    document.getElementById('info-container').innerText = "Object detection model loaded. Ready!";
 }
 
 async function loop() {
@@ -73,6 +70,40 @@ async function predict() {
     }
 }
 
+async function detectFrame() {
+    if (!model) return;
+    const predictions = await model.detect(video);
+
+    // Clear overlay
+    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+    // Draw bounding boxes and AR overlays
+    predictions.forEach(pred => {
+        if (pred.score > 0.6) { // confidence threshold
+            const [x, y, w, h] = pred.bbox;
+            // Draw bounding box
+            overlayCtx.strokeStyle = "#e53935";
+            overlayCtx.lineWidth = 4;
+            overlayCtx.strokeRect(x, y, w, h);
+
+            // Draw AR overlay (simple circle in center of detected object)
+            overlayCtx.beginPath();
+            overlayCtx.arc(x + w / 2, y + h / 2, Math.min(w, h) / 4, 0, 2 * Math.PI);
+            overlayCtx.fillStyle = "rgba(229,57,53,0.5)";
+            overlayCtx.fill();
+
+            // Label
+            overlayCtx.font = "20px Arial";
+            overlayCtx.fillStyle = "#fff";
+            overlayCtx.fillText(pred.class, x, y > 20 ? y - 5 : y + 20);
+        }
+    });
+
+    // Show debug info
+    document.getElementById('label-container').innerText =
+        predictions.map(p => `${p.class}: ${(p.score * 100).toFixed(1)}%`).join('\n');
+}
+
 async function onRecognizeClick() {
     const infoDiv = document.getElementById('info-container');
     infoDiv.innerText = 'Recognizing...';
@@ -90,5 +121,11 @@ window.onload = async () => {
     } catch (error) {
         debugDiv.innerText += 'Error loading model: ' + error.message + '\n';
     }
+
+    // Run detection loop
+    function loop() {
+        detectFrame();
+        requestAnimationFrame(loop);
+    }
+    loop();
 }
-;
