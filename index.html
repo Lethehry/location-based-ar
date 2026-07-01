@@ -22,11 +22,20 @@
         }
     </style>
 </head>
+
+<div id="scanning-overlay" style="position: absolute; z-index: 999; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); color: white; display: flex; justify-content: center; align-items: center;">
+    请将摄像头对准目标靶图 (Target)
+</div>
+
 <body>
     <div id="poem-box" class="poem-overlay">春眠不觉晓，<br>处处闻啼鸟。</div>
 
-    <a-scene mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/targets.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-        
+    <a-scene 
+    mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/targets.mind; autoStart: true; uiScanning: #scanning-overlay;" 
+    vr-mode-ui="enabled: false" 
+    device-orientation-permission-ui="enabled: false"
+    renderer="colorManagement: true, physicallyCorrectLights"
+    embedded>    
         <a-assets>
             <img id="bird-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='10' y='80' font-size='70'>🐦</text></svg>">
         </a-assets>
