@@ -3,63 +3,67 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>春晓 AR - A-Frame 稳定测试版</title>
+    <title>春晓 - 博物馆 AR 互动沙盘</title>
     
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <style>
-        body { margin: 0; overflow: hidden; background: #222; }
-        
+        body { margin: 0; overflow: hidden; }
+        /* 扫描引导层 */
+        #scanning-overlay {
+            position: absolute; z-index: 999; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); color: white; display: flex;
+            justify-content: center; align-items: center; font-family: sans-serif;
+            text-align: center;
+        }
+        /* 诗句浮现层 */
         .poem-overlay {
-            position: absolute; right: 5%; top: 10%;
-            font-family: "STKaiti", "KaiTi", serif;
-            font-size: 28px; font-weight: bold; color: #fff;
+            position: absolute; right: 8%; top: 15%;
+            font-family: "KaiTi", serif;
+            font-size: 32px; font-weight: bold; color: #fff;
             writing-mode: vertical-rl;
             letter-spacing: 0.2em; opacity: 0;
             transition: opacity 1.5s ease; z-index: 100;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.8);
         }
     </style>
 </head>
 
-<div id="scanning-overlay" style="position: absolute; z-index: 999; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); color: white; display: flex; justify-content: center; align-items: center;">
-    请将摄像头对准目标靶图 (Target)
-</div>
-
 <body>
+    <div id="scanning-overlay">请将摄像头对准磁吸沙盘</div>
+    
     <div id="poem-box" class="poem-overlay">春眠不觉晓，<br>处处闻啼鸟。</div>
 
     <a-scene 
-    mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/targets.mind; autoStart: true; uiScanning: #scanning-overlay;" 
-    vr-mode-ui="enabled: false" 
-    device-orientation-permission-ui="enabled: false"
-    renderer="colorManagement: true, physicallyCorrectLights"
-    embedded>    
+        mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/targets.mind; uiScanning: #scanning-overlay;" 
+        vr-mode-ui="enabled: false" 
+        device-orientation-permission-ui="enabled: false"
+        embedded>
+        
         <a-assets>
-            <img id="bird-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='10' y='80' font-size='70'>🐦</text></svg>">
+            <img id="bird-asset" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='10' y='80' font-size='70'>🐦</text></svg>">
         </a-assets>
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
         <a-entity mindar-image-target="targetIndex: 0" id="target-bird">
-            
-            <a-image src="#bird-img" position="0 0 0" width="0.5" height="0.5" 
-                     animation="property: position; to: 0 0.5 0; dur: 1500; easing: easeInOutSine; loop: true; dir: alternate;">
+            <a-image src="#bird-asset" position="0 0 0" width="0.6" height="0.6" 
+                     animation="property: position; to: 0 0.4 0; dur: 2000; easing: easeInOutSine; loop: true; dir: alternate;">
             </a-image>
-
         </a-entity>
     </a-scene>
 
     <script>
-        // 用极简的代码控制 UI 的浮现
         const targetBird = document.querySelector('#target-bird');
         const poemBox = document.querySelector('#poem-box');
 
+        // 识别成功：动画浮现
         targetBird.addEventListener("targetFound", () => {
             poemBox.style.opacity = "1";
         });
 
+        // 目标丢失：动画消失
         targetBird.addEventListener("targetLost", () => {
             poemBox.style.opacity = "0";
         });
