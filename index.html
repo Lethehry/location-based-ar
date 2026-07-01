@@ -1,125 +1,58 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset='utf-8'>
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>春晓 AR - 在线免素材测试版</title>
+    <title>春晓 AR - A-Frame 稳定测试版</title>
     
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image.prod.js"></script>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <style>
         body { margin: 0; overflow: hidden; background: #222; }
         
-        /* 古风诗句浮现层 UI */
         .poem-overlay {
             position: absolute; right: 5%; top: 10%;
-            font-family: "STKaiti", "KaiTi", serif; /* 楷体 */
+            font-family: "STKaiti", "KaiTi", serif;
             font-size: 28px; font-weight: bold; color: #fff;
-            writing-mode: vertical-rl; /* 垂直排版 */
+            writing-mode: vertical-rl;
             letter-spacing: 0.2em; opacity: 0;
             transition: opacity 1.5s ease; z-index: 100;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8); /* 增加阴影防止看不清 */
-        }
-
-        /* 加载提示 UI */
-        #loading-screen {
-            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0,0,0,0.8); color: white; display: flex;
-            justify-content: center; align-items: center; z-index: 999;
-            font-size: 20px; font-family: sans-serif;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
         }
     </style>
 </head>
-
 <body>
-    <div id="loading-screen">正在加载 AR 引擎与线上模型，请稍候...</div>
-
     <div id="poem-box" class="poem-overlay">春眠不觉晓，<br>处处闻啼鸟。</div>
 
-    <div id="webcam-container" style="position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:1;">
-        <video id="overlay-video" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit: cover; z-index:10;" autoplay loop muted playsinline></video>
-        <canvas id="overlay-canvas" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:20; pointer-events:none;"></canvas>
-    </div>
+    <a-scene mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/targets.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+        
+        <a-assets>
+            <img id="bird-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='10' y='80' font-size='70'>🐦</text></svg>">
+        </a-assets>
+
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+        <a-entity mindar-image-target="targetIndex: 0" id="target-bird">
+            
+            <a-image src="#bird-img" position="0 0 0" width="0.5" height="0.5" 
+                     animation="property: position; to: 0 0.5 0; dur: 1500; easing: easeInOutSine; loop: true; dir: alternate;">
+            </a-image>
+
+        </a-entity>
+    </a-scene>
 
     <script>
-        // 1. 使用 SVG Data URI 生成一个临时测试用的“小鸟”图片（完美解决跨域加载问题）
-        const birdImg = new Image();
-        birdImg.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text x="10" y="80" font-size="70">🐦</text></svg>';
+        // 用极简的代码控制 UI 的浮现
+        const targetBird = document.querySelector('#target-bird');
+        const poemBox = document.querySelector('#poem-box');
 
-        let birdAnimation = { frameIndex: 0 };
-        let isTargetFound = false;
+        targetBird.addEventListener("targetFound", () => {
+            poemBox.style.opacity = "1";
+        });
 
-        document.addEventListener("DOMContentLoaded", async () => {
-            const video = document.querySelector("#overlay-video");
-            const canvas = document.querySelector("#overlay-canvas");
-            const ctx = canvas.getContext("2d");
-            const loadingScreen = document.querySelector("#loading-screen");
-            const poemBox = document.querySelector("#poem-box");
-
-            // 同步 Canvas 尺寸
-            const resizeCanvas = () => {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-            };
-            window.addEventListener('resize', resizeCanvas);
-            resizeCanvas();
-
-            // 2. 初始化 MindAR，使用官方提供的 CDN 测试靶图 (targets.mind)
-            const mindarImage = new mindid.MindARImage({
-                imageTargetSrc: 'https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.0/examples/image-tracking/assets/card-example/targets.mind',
-                numTargets: 1, // 官方测试文件只有1个目标
-                videoOptions: { videoEl: video }
-            });
-
-            // 3. 启动引擎
-            try {
-                await mindarImage.start();
-                loadingScreen.style.display = 'none'; // 隐藏加载提示
-                console.log("AR 引擎启动成功！请扫描测试靶图。");
-            } catch (error) {
-                loadingScreen.innerText = "相机启动失败，请确保使用 HTTPS 并授予相机权限。";
-                console.error("启动失败:", error);
-                return;
-            }
-
-            // 4. 逐帧渲染逻辑
-            const tick = () => {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                // 获取目标 0 (测试靶图) 的坐标矩阵
-                const activeResult = mindarImage.getCoordinate(0);
-                
-                if (activeResult) {
-                    isTargetFound = true;
-                    // 解析矩阵，将 3D 坐标映射到屏幕 2D 像素
-                    const [m0, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15] = activeResult;
-                    const screenX = ((m12 + 1) / 2) * canvas.width;
-                    const screenY = ((1 - m13) / 2) * canvas.height;
-                    
-                    // 动态计算渲染尺寸（离镜头越近，图案越大）
-                    const size = m0 * window.innerWidth * 0.5; 
-
-                    // 绘制小鸟并附带一个简单的上下浮动动画
-                    birdAnimation.frameIndex++;
-                    const bounce = Math.sin(birdAnimation.frameIndex * 0.05) * 20; 
-                    
-                    ctx.save();
-                    // 将小鸟精准绘制在靶图的中心位置
-                    ctx.drawImage(birdImg, screenX - size/2, screenY - size/2 + bounce, size, size);
-                    ctx.restore();
-
-                    // 显示诗句 UI
-                    poemBox.style.opacity = "1";
-                } else {
-                    isTargetFound = false;
-                    // 丢失目标时，隐藏诗句
-                    poemBox.style.opacity = "0";
-                }
-
-                requestAnimationFrame(tick);
-            };
-
-            requestAnimationFrame(tick);
+        targetBird.addEventListener("targetLost", () => {
+            poemBox.style.opacity = "0";
         });
     </script>
 </body>
