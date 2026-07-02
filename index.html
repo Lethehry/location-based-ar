@@ -2,21 +2,33 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>春曉 - 博物館 AR 互動沙盤</title>
     
-    <!-- 引入 A-Frame 和 MindAR -->
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <!-- 1. 降级到最稳定的 1.4.2 版本，完美修复 1.5.0 的黑屏与 VR 按钮死活去不掉的 Bug -->
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
     
     <style>
-        /* 1. 鎖死全屏，確保相機畫面鋪滿，不再被擠壓 */
+        /* 2. 顶层强制透明，允许底层相机视频流穿透显示 */
         html, body { 
             margin: 0; padding: 0; width: 100%; height: 100%; 
-            overflow: hidden; background-color: #111; 
+            overflow: hidden; background: transparent !important; 
         }
         
-        /* 2. 升級掃描引導層：變成全透明的遮罩，只在中央和底部做視覺引導 */
+        /* 3. 核心修复：强行将 A-Frame 自动生成的 3D 画布背景设为透明，否则就是一片黑 */
+        .a-canvas {
+            background-color: transparent !important;
+            z-index: 2;
+        }
+
+        /* 4. 彻底物理抹杀可能残存的 VR 按钮 */
+        .a-enter-vr, .a-enter-ar, .a-enter-vr-button, .a-orientation-modal {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        /* 懸浮引導層 UI */
         #scanning-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             z-index: 99; pointer-events: none;
@@ -24,82 +36,79 @@
             justify-content: center; align-items: center;
         }
 
-        /* 3. 亮點：新增中式古典掃描框（四角金邊包圍） */
+        /* 中式古典掃描框 */
         .scan-reticle {
-            width: 260px; height: 260px;
-            border: 2px dashed rgba(255, 255, 255, 0.4);
-            position: relative; margin-bottom: 30px;
-            box-shadow: 0 0 20px rgba(255,255,255,0.1);
+            width: 240px; height: 240px;
+            border: 2px dashed rgba(255, 255, 255, 0.35);
+            position: relative; margin-bottom: 40px;
         }
-        /* 掃描框的四個金色文藝角 */
         .scan-reticle::before, .scan-reticle::after {
-            content: ''; position: absolute; width: 20px; height: 20px;
+            content: ''; position: absolute; width: 24px; height: 24px;
         }
         .scan-reticle::before {
-            top: -2px; left: -2px; border-top: 4px solid #ccaf7d; border-left: 4px solid #ccaf7d;
+            top: -2px; left: -2px; border-top: 5px solid #ccaf7d; border-left: 5px solid #ccaf7d;
         }
         .scan-reticle::after {
-            bottom: -2px; right: -2px; border-bottom: 4px solid #ccaf7d; border-right: 4px solid #ccaf7d;
+            bottom: -2px; right: -2px; border-bottom: 5px solid #ccaf7d; border-right: 5px solid #ccaf7d;
         }
 
-        /* 4. 解決灰色大補丁：改成底部優雅的「玻璃擬態懸浮膠囊」 */
+        /* 底部膠囊提示語 */
         .scan-hint-capsule {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(10px); /* 磨砂玻璃特效 */
-            -webkit-backdrop-filter: blur(10px);
-            color: #1a1a1a; padding: 12px 28px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            color: #111; padding: 14px 32px;
             border-radius: 30px; font-family: sans-serif;
-            font-size: 16px; font-weight: bold; letter-spacing: 0.1em;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            animation: pulse 2s infinite ease-in-out; /* 呼吸燈特效，提醒注意 */
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.9; }
-            50% { transform: scale(1.03); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.9; }
+            font-size: 15px; font-weight: bold; letter-spacing: 0.1em;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
         }
         
-        /* 5. 詩句升級：做成帶有古典宣紙質感的懸浮卷軸，不再和背景混在一起 */
+        /* 宣紙詩句卷軸 UI */
         .poem-overlay {
-            position: fixed; right: 6%; top: 10%;
-            background: rgba(247, 244, 232, 0.95); /* 古典宣紙色 */
-            border-left: 3px solid #ccaf7d; /* 側邊金線 */
-            padding: 35px 18px; border-radius: 4px;
+            position: fixed; right: 6%; top: 12%;
+            background: rgba(247, 244, 232, 0.96); 
+            border-left: 3px solid #ccaf7d;
+            padding: 35px 20px; border-radius: 4px;
             font-family: "STKaiti", "KaiTi", serif;
-            font-size: 26px; font-weight: bold; color: #222;
-            writing-mode: vertical-rl; /* 垂直排版 */
-            letter-spacing: 0.25em; line-height: 1.6;
-            opacity: 0; transform: translateX(20px);
-            transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+            font-size: 26px; font-weight: bold; color: #111;
+            writing-mode: vertical-rl;
+            letter-spacing: 0.3em; line-height: 1.5;
+            
+            opacity: 0; 
+            visibility: hidden; 
+            transform: translateX(30px);
+            
+            transition: opacity 1s ease, transform 1s cubic-bezier(0.16, 1, 0.3, 1), visibility 1s;
             z-index: 100;
-            box-shadow: -5px 10px 30px rgba(0,0,0,0.25);
+            box-shadow: -8px 12px 35px rgba(0,0,0,0.3);
         }
-        /* 当识别成功后激活的样式 */
         .poem-overlay.active {
-            opacity: 1; transform: translateX(0);
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(0);
         }
     </style>
 </head>
 
 <body>
-    <!-- 輕量化、高質感的全新掃描引導層 -->
+
+    <!-- 懸浮引導層 -->
     <div id="scanning-overlay">
         <div class="scan-reticle"></div>
         <div class="scan-hint-capsule">請將鏡頭對準實體磁吸沙盤</div>
     </div>
     
-    <!-- 博物館宣紙風 詩句浮現盒 -->
-    <div id="poem-box" class="poem-overlay">春眠不覺曉，<br>處處聞啼鳥。</div>
+    <!-- 宣紙卷軸 -->
+    <div id="poem-box" class="poem-overlay">處處聞啼鳥。</div>
 
-    <!-- AR 舞台 -->
+    <!-- AR 场景：指定 A-Frame 渲染器透明度 -->
     <a-scene 
-        mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind; uiScanning: #scanning-overlay;" 
+        mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.2/examples/image-tracking/assets/card-example/card.mind; uiScanning: #scanning-overlay;" 
         vr-mode-ui="enabled: false" 
         device-orientation-permission-ui="enabled: false"
         embedded
-        style="position: absolute; width: 100%; height: 100%; top: 0; left: 0;">
+        renderer="transparent: true, alpha: true"
+        style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 1;">
         
         <a-assets>
             <img id="bird-asset" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='10' y='80' font-size='70'>🐦</text></svg>">
@@ -107,9 +116,10 @@
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-        <!-- 追蹤實體玩具 -->
+        <!-- 追蹤目標 -->
         <a-entity mindar-image-target="targetIndex: 0" id="target-bird">
-            <a-image src="#bird-asset" position="0 0 0" width="0.5" height="0.5" 
+            <!-- 稍微调大了一点尺寸 (0.6)，让它在屏幕上更明显 -->
+            <a-image src="#bird-asset" position="0 0 0" width="0.6" height="0.6" 
                      animation="property: position; to: 0 0.3 0; dur: 2000; easing: easeInOutSine; loop: true; dir: alternate;">
             </a-image>
         </a-entity>
@@ -119,12 +129,10 @@
         const targetBird = document.querySelector('#target-bird');
         const poemBox = document.querySelector('#poem-box');
 
-        // 識別成功：優雅淡入宣紙詩句
         targetBird.addEventListener("targetFound", () => {
             poemBox.classList.add('active');
         });
 
-        // 目標丟失：詩句消失
         targetBird.addEventListener("targetLost", () => {
             poemBox.classList.remove('active');
         });
