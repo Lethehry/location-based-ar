@@ -3,43 +3,103 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>春晓 - 博物馆 AR 互动沙盘</title>
+    <title>春曉 - 博物館 AR 互動沙盤</title>
     
+    <!-- 引入 A-Frame 和 MindAR -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <style>
-        body { margin: 0; overflow: hidden; }
-        /* 扫描引导层 */
-        #scanning-overlay {
-            position: absolute; z-index: 999; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); color: white; display: flex;
-            justify-content: center; align-items: center; font-family: sans-serif;
-            text-align: center;
+        /* 1. 鎖死全屏，確保相機畫面鋪滿，不再被擠壓 */
+        html, body { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            overflow: hidden; background-color: #111; 
         }
-        /* 诗句浮现层 */
+        
+        /* 2. 升級掃描引導層：變成全透明的遮罩，只在中央和底部做視覺引導 */
+        #scanning-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 99; pointer-events: none;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+        }
+
+        /* 3. 亮點：新增中式古典掃描框（四角金邊包圍） */
+        .scan-reticle {
+            width: 260px; height: 260px;
+            border: 2px dashed rgba(255, 255, 255, 0.4);
+            position: relative; margin-bottom: 30px;
+            box-shadow: 0 0 20px rgba(255,255,255,0.1);
+        }
+        /* 掃描框的四個金色文藝角 */
+        .scan-reticle::before, .scan-reticle::after {
+            content: ''; position: absolute; width: 20px; height: 20px;
+        }
+        .scan-reticle::before {
+            top: -2px; left: -2px; border-top: 4px solid #ccaf7d; border-left: 4px solid #ccaf7d;
+        }
+        .scan-reticle::after {
+            bottom: -2px; right: -2px; border-bottom: 4px solid #ccaf7d; border-right: 4px solid #ccaf7d;
+        }
+
+        /* 4. 解決灰色大補丁：改成底部優雅的「玻璃擬態懸浮膠囊」 */
+        .scan-hint-capsule {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px); /* 磨砂玻璃特效 */
+            -webkit-backdrop-filter: blur(10px);
+            color: #1a1a1a; padding: 12px 28px;
+            border-radius: 30px; font-family: sans-serif;
+            font-size: 16px; font-weight: bold; letter-spacing: 0.1em;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: pulse 2s infinite ease-in-out; /* 呼吸燈特效，提醒注意 */
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.03); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.9; }
+        }
+        
+        /* 5. 詩句升級：做成帶有古典宣紙質感的懸浮卷軸，不再和背景混在一起 */
         .poem-overlay {
-            position: absolute; right: 8%; top: 15%;
-            font-family: "KaiTi", serif;
-            font-size: 32px; font-weight: bold; color: #fff;
-            writing-mode: vertical-rl;
-            letter-spacing: 0.2em; opacity: 0;
-            transition: opacity 1.5s ease; z-index: 100;
-            text-shadow: 2px 2px 5px rgba(0,0,0,0.8);
+            position: fixed; right: 6%; top: 10%;
+            background: rgba(247, 244, 232, 0.95); /* 古典宣紙色 */
+            border-left: 3px solid #ccaf7d; /* 側邊金線 */
+            padding: 35px 18px; border-radius: 4px;
+            font-family: "STKaiti", "KaiTi", serif;
+            font-size: 26px; font-weight: bold; color: #222;
+            writing-mode: vertical-rl; /* 垂直排版 */
+            letter-spacing: 0.25em; line-height: 1.6;
+            opacity: 0; transform: translateX(20px);
+            transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 100;
+            box-shadow: -5px 10px 30px rgba(0,0,0,0.25);
+        }
+        /* 当识别成功后激活的样式 */
+        .poem-overlay.active {
+            opacity: 1; transform: translateX(0);
         }
     </style>
 </head>
 
 <body>
-    <div id="scanning-overlay">请将摄像头对准磁吸沙盘</div>
+    <!-- 輕量化、高質感的全新掃描引導層 -->
+    <div id="scanning-overlay">
+        <div class="scan-reticle"></div>
+        <div class="scan-hint-capsule">請將鏡頭對準實體磁吸沙盤</div>
+    </div>
     
-    <div id="poem-box" class="poem-overlay">春眠不觉晓，<br>处处闻啼鸟。</div>
+    <!-- 博物館宣紙風 詩句浮現盒 -->
+    <div id="poem-box" class="poem-overlay">春眠不覺曉，<br>處處聞啼鳥。</div>
 
+    <!-- AR 舞台 -->
     <a-scene 
         mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind; uiScanning: #scanning-overlay;" 
         vr-mode-ui="enabled: false" 
         device-orientation-permission-ui="enabled: false"
-        embedded>
+        embedded
+        style="position: absolute; width: 100%; height: 100%; top: 0; left: 0;">
         
         <a-assets>
             <img id="bird-asset" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='10' y='80' font-size='70'>🐦</text></svg>">
@@ -47,9 +107,10 @@
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
+        <!-- 追蹤實體玩具 -->
         <a-entity mindar-image-target="targetIndex: 0" id="target-bird">
-            <a-image src="#bird-asset" position="0 0 0" width="0.6" height="0.6" 
-                     animation="property: position; to: 0 0.4 0; dur: 2000; easing: easeInOutSine; loop: true; dir: alternate;">
+            <a-image src="#bird-asset" position="0 0 0" width="0.5" height="0.5" 
+                     animation="property: position; to: 0 0.3 0; dur: 2000; easing: easeInOutSine; loop: true; dir: alternate;">
             </a-image>
         </a-entity>
     </a-scene>
@@ -58,14 +119,14 @@
         const targetBird = document.querySelector('#target-bird');
         const poemBox = document.querySelector('#poem-box');
 
-        // 识别成功：动画浮现
+        // 識別成功：優雅淡入宣紙詩句
         targetBird.addEventListener("targetFound", () => {
-            poemBox.style.opacity = "1";
+            poemBox.classList.add('active');
         });
 
-        // 目标丢失：动画消失
+        // 目標丟失：詩句消失
         targetBird.addEventListener("targetLost", () => {
-            poemBox.style.opacity = "0";
+            poemBox.classList.remove('active');
         });
     </script>
 </body>
