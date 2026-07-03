@@ -2,36 +2,54 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>春曉 - 博物館 AR 互動沙盤</title>
     
-    <!-- 1. 降级到最稳定的 1.4.2 版本，完美修复 1.5.0 的黑屏与 VR 按钮死活去不掉的 Bug -->
+    <!-- 使用最穩定的 1.4.2 版本 -->
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
     
     <style>
-        /* 2. 顶层强制透明，允许底层相机视频流穿透显示 */
+        /* 1. 視窗鎖死：強制禁止任何方向的滑動，寬高鎖死 100% */
         html, body { 
-            margin: 0; padding: 0; width: 100%; height: 100%; 
-            overflow: hidden; background: transparent !important; 
+            margin: 0; padding: 0; 
+            width: 100vw !important; height: 100vh !important; 
+            overflow: hidden !important; 
+            position: fixed !important; /* 徹底封死右滑 */
+            background: transparent !important;
         }
         
-        /* 3. 核心修复：强行将 A-Frame 自动生成的 3D 画布背景设为透明，否则就是一片黑 */
-        .a-canvas {
-            background-color: transparent !important;
-            z-index: 2;
+        /* 2. 捕獲並降伏 MindAR 自動生成的 video 標籤，強行逼它去最底層鋪滿 */
+        video {
+            position: fixed !important;
+            top: 0 !important; left: 0 !important;
+            width: 100vw !important; height: 100vh !important;
+            object-fit: cover !important;
+            z-index: -1 !important; /* 乖乖待在最底層 */
         }
 
-        /* 4. 彻底物理抹杀可能残存的 VR 按钮 */
-        .a-enter-vr, .a-enter-ar, .a-enter-vr-button, .a-orientation-modal {
+        /* 3. A-Frame 3D 畫布層：絕對定位疊加在影片上方，背景透明 */
+        .a-canvas {
+            position: fixed !important;
+            top: 0 !important; left: 0 !important;
+            width: 100vw !important; height: 100vh !important;
+            background-color: transparent !important;
+            z-index: 1 !important; /* 第二層 */
+        }
+
+        /* 4. 暴力清除所有 A-Frame 原生 UI，包括那個頑固的 VR 按鈕 */
+        .a-enter-vr, .a-enter-ar, .a-enter-vr-button, .a-enter-ar-button, .a-orientation-modal, .a-loader-title {
             display: none !important;
             visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
         }
 
-        /* 懸浮引導層 UI */
+        /* 5. UI 引導層：懸浮在最頂層 */
         #scanning-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: 99; pointer-events: none;
+            z-index: 10; /* 最頂層 */
+            pointer-events: none;
             display: flex; flex-direction: column;
             justify-content: center; align-items: center;
         }
@@ -39,7 +57,7 @@
         /* 中式古典掃描框 */
         .scan-reticle {
             width: 240px; height: 240px;
-            border: 2px dashed rgba(255, 255, 255, 0.35);
+            border: 2px dashed rgba(255, 255, 255, 0.4);
             position: relative; margin-bottom: 40px;
         }
         .scan-reticle::before, .scan-reticle::after {
@@ -54,7 +72,7 @@
 
         /* 底部膠囊提示語 */
         .scan-hint-capsule {
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             color: #111; padding: 14px 32px;
@@ -79,7 +97,7 @@
             transform: translateX(30px);
             
             transition: opacity 1s ease, transform 1s cubic-bezier(0.16, 1, 0.3, 1), visibility 1s;
-            z-index: 100;
+            z-index: 11; /* 確保在畫布之上 */
             box-shadow: -8px 12px 35px rgba(0,0,0,0.3);
         }
         .poem-overlay.active {
@@ -101,14 +119,14 @@
     <!-- 宣紙卷軸 -->
     <div id="poem-box" class="poem-overlay">處處聞啼鳥。</div>
 
-    <!-- AR 场景：指定 A-Frame 渲染器透明度 -->
+    <!-- AR 舞台 -->
     <a-scene 
         mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.2/examples/image-tracking/assets/card-example/card.mind; uiScanning: #scanning-overlay;" 
         vr-mode-ui="enabled: false" 
         device-orientation-permission-ui="enabled: false"
         embedded
         renderer="transparent: true, alpha: true"
-        style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 1;">
+        style="position: absolute; width: 100vw; height: 100vh; top: 0; left: 0; z-index: 2;">
         
         <a-assets>
             <img id="bird-asset" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='10' y='80' font-size='70'>🐦</text></svg>">
@@ -118,9 +136,8 @@
 
         <!-- 追蹤目標 -->
         <a-entity mindar-image-target="targetIndex: 0" id="target-bird">
-            <!-- 稍微调大了一点尺寸 (0.6)，让它在屏幕上更明显 -->
-            <a-image src="#bird-asset" position="0 0 0" width="0.6" height="0.6" 
-                     animation="property: position; to: 0 0.3 0; dur: 2000; easing: easeInOutSine; loop: true; dir: alternate;">
+            <a-image src="#bird-asset" position="0 0 0" width="0.55" height="0.55" 
+                     animation="property: position; to: 0 0.25 0; dur: 2000; easing: easeInOutSine; loop: true; dir: alternate;">
             </a-image>
         </a-entity>
     </a-scene>
